@@ -2,12 +2,13 @@ require "log4r"
 
 module VagrantPlugins
   module DSC
-    module Provisioner
+    # module Provisioner
       class DSCError < Vagrant::Errors::VagrantError
-        error_namespace("vagrant.provisioners.dsc")
+        error_namespace("vagrant_dsc.errors")
+        I18n.load_path << File.expand_path("locales/en.yml", File.dirname(__FILE__))
       end
 
-      class DSC < Vagrant.plugin("2", :provisioner)
+      class Provisioner < Vagrant.plugin("2", :provisioner)
         def initialize(machine, config)
           super
 
@@ -15,6 +16,8 @@ module VagrantPlugins
         end
 
         def configure(root_config)
+          @logger.info("==> Configuring DSC man!")
+
           # Calculate the paths we're going to use based on the environment
           root_path = @machine.env.root_path
           @expanded_module_paths   = @config.expanded_module_paths(root_path)
@@ -41,9 +44,13 @@ module VagrantPlugins
           @module_paths.each do |from, to|
             root_config.vm.synced_folder(from, to, folder_opts)
           end
+
         end
 
+
         def provision
+          @logger.info("==> Provisioning DSC man! #{Vagrant.source_root}")
+
           # If the machine has a wait for reboot functionality, then
           # do that (primarily Windows)
           if @machine.guest.capability?(:wait_for_reboot)
@@ -79,6 +86,42 @@ module VagrantPlugins
             @machine.communicate.upload(local_hiera_path, @hiera_config_path)
           end
 
+        end
+
+        def configure2(root_config)
+          # Calculate the paths we're going to use based on the environment
+          root_path = @machine.env.root_path
+          @expanded_module_paths   = @config.expanded_module_paths(root_path)
+          @manifest_file           = File.join(manifests_guest_path, @config.manifest_file)
+
+          # Setup the module paths
+          @module_paths = []
+          @expanded_module_paths.each_with_index do |path, i|
+            @module_paths << [path, File.join(config.temp_dir, "modules-#{i}")]
+          end
+
+          folder_opts = {}
+          folder_opts[:type] = @config.synced_folder_type if @config.synced_folder_type
+          folder_opts[:owner] = "root" if !@config.synced_folder_type
+
+          # Share the manifests directory with the guest
+          if @config.manifests_path[0].to_sym == :host
+            root_config.vm.synced_folder(
+              File.expand_path(@config.manifests_path[1], root_path),
+              manifests_guest_path, folder_opts)
+          end
+
+          # Share the module paths
+          @module_paths.each do |from, to|
+            root_config.vm.synced_folder(from, to, folder_opts)
+          end
+        end
+
+        def provision2
+
+
+
+
           run_dsc_apply
         end
 
@@ -101,6 +144,19 @@ module VagrantPlugins
         end
 
         def run_dsc_apply
+
+          # Set up Configuration arguments (hostname, manifest/module location, error levels ...)
+
+            # Where are the modules?
+
+            # Where is the manifest
+
+
+          # TODO: Create I18n for locale-based messages (en by default)
+
+
+
+
           default_module_path = "/etc/dsc/modules"
           if windows?
             default_module_path = "/ProgramData/DSCLabs/dsc/etc/modules"
@@ -156,7 +212,7 @@ module VagrantPlugins
           end
 
           @machine.ui.info(I18n.t(
-            "vagrant.provisioners.dsc.running_dsc",
+            "vagrant.provisioners.dse.running_dsc",
             manifest: config.manifest_file))
 
           opts = {
@@ -185,5 +241,5 @@ module VagrantPlugins
         end
       end
     end
-  end
+  # end
 end
