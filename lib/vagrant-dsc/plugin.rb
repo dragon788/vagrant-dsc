@@ -9,15 +9,6 @@ module VagrantPlugins
       DSC either using a local `DSC` Configuration or a DSC server.
       DESC
 
-      # Supported modes:
-      #
-      # 1. Local Config
-      # 2. Local MOF
-      # 3. Remote DSC / Pull
-
-
-      # Should also support Named arguments to pass into DSC Configuration Run
-
       config(:dsc, :provisioner) do
         require_relative 'config'
         Config
