@@ -3,6 +3,7 @@ require 'coveralls'
 
 require 'vagrant-dsc/version'
 require 'vagrant-dsc/plugin'
+require 'rspec/its'
 
 SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter[
     SimpleCov::Formatter::HTMLFormatter,
@@ -18,4 +19,5 @@ RSpec.configure do |config|
   end
   config.color = true
   config.tty = true
+  config.raise_errors_for_deprecations!
 end

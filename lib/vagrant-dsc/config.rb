@@ -47,6 +47,7 @@ module VagrantPlugins
         @module_path        = nil if @module_path == UNSET_VALUE
         @synced_folder_type = nil if @synced_folder_type == UNSET_VALUE
         @temp_dir           = nil if @temp_dir == UNSET_VALUE
+        @mof_file           = nil if @mof_file == UNSET_VALUE
         @working_directory  = nil if @working_directory == UNSET_VALUE
         @configuration_name = File.basename(@manifest_file, File.extname(@manifest_file)) if @configuration_name == UNSET_VALUE
         @manifests_path     = File.dirname(@manifest_file)

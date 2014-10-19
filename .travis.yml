@@ -9,3 +9,4 @@ matrix:
   - env: VAGRANT_VERSION=v1.6.5
   rvm: 1.9.3
   - env: VAGRANT_VERSION=v1.6.5
+script: bundle exec rake test:unit
