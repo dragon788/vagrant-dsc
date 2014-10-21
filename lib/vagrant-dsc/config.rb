@@ -15,7 +15,6 @@ module VagrantPlugins
       attr_accessor :options
       attr_accessor :synced_folder_type
       attr_accessor :temp_dir
-      attr_accessor :working_directory
 
       def initialize
         super
@@ -29,7 +28,6 @@ module VagrantPlugins
         @facter             = {}
         @synced_folder_type = UNSET_VALUE
         @temp_dir           = UNSET_VALUE
-        @working_directory  = UNSET_VALUE
 
         @logger = Log4r::Logger.new("vagrant::vagrant_dsc")
       end
@@ -48,7 +46,6 @@ module VagrantPlugins
         @synced_folder_type = nil if @synced_folder_type == UNSET_VALUE
         @temp_dir           = nil if @temp_dir == UNSET_VALUE
         @mof_file           = nil if @mof_file == UNSET_VALUE
-        @working_directory  = nil if @working_directory == UNSET_VALUE
         @configuration_name = File.basename(@manifest_file, File.extname(@manifest_file)) if @configuration_name == UNSET_VALUE
         @manifests_path     = File.dirname(@manifest_file)
 
@@ -85,9 +82,18 @@ module VagrantPlugins
         this_expanded_module_paths = expanded_module_paths(machine.env.root_path)
 
         # Manifest file validation
+        this_expanded_module_paths.each do |path|
+          errors << I18n.t("vagrant_dsc.errors.module_path_missing", path: path.to_s) if !Pathname.new(path).expand_path(machine.env.root_path).directory?
 
-        if manifests_path[0].to_sym == :host
-          expanded_path = Pathname.new(manifests_path[1]).
+        end
+
+        # if !expanded_path.directory?
+        #   errors << I18n.t("vagrant_dsc.errors.manifests_path_missing",
+        #                    path: expanded_path.to_s)
+        # end
+
+        # if manifests_path[0].to_sym == :host
+          expanded_path = Pathname.new(manifests_path).
               expand_path(machine.env.root_path)
           if !expanded_path.directory?
             errors << I18n.t("vagrant_dsc.errors.manifests_path_missing",
@@ -99,7 +105,7 @@ module VagrantPlugins
                                manifest: expanded_manifest_file.to_s)
             end
           end
-        end
+        # end
 
         { "dsc provisioner" => errors }
       end

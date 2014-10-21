@@ -19,5 +19,5 @@ RSpec.configure do |config|
   end
   config.color = true
   config.tty = true
-  config.raise_errors_for_deprecations!
+  # config.raise_errors_for_deprecations!
 end
