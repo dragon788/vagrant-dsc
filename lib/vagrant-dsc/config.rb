@@ -47,7 +47,7 @@ module VagrantPlugins
         @temp_dir           = nil if @temp_dir == UNSET_VALUE
         @mof_file           = nil if @mof_file == UNSET_VALUE
         @configuration_name = File.basename(@manifest_file, File.extname(@manifest_file)) if @configuration_name == UNSET_VALUE
-        @manifests_path     = File.dirname(@manifest_file)
+        @manifests_path     = File.dirname(@manifest_file) if @manifests_path == UNSET_VALUE
 
         # Set a default temp dir that has an increasing counter so
         # that multiple DSC definitions won't overwrite each other

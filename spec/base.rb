@@ -1,57 +1,54 @@
-require "tmpdir"
-require "rubygems"
+shared_context "unit" do
+  before(:each) do
+    # State to store the list of registered plugins that we have to
+    # unregister later.
+    @_plugins = []
 
-# Gems
-require "checkpoint"
-require "rspec/autorun"
-
-# Require Vagrant itself so we can reference the proper
-# classes to test.
-require "vagrant"
-require "vagrant/util/platform"
-
-# Add the test directory to the load path
-$:.unshift File.expand_path("../../", __FILE__)
-
-# Load in helpers
-require "vagrant/unit/support/dummy_communicator"
-require "vagrant/unit/support/dummy_provider"
-require "vagrant/unit/support/shared/base_context"
-require "vagrant/unit/support/shared/action_synced_folders_context"
-require "vagrant/unit/support/shared/capability_helpers_context"
-require "vagrant/unit/support/shared/plugin_command_context"
-require "vagrant/unit/support/shared/virtualbox_context"
-
-# Do not buffer output
-$stdout.sync = true
-$stderr.sync = true
-
-# Configure RSpec
-RSpec.configure do |c|
-  c.expect_with :rspec, :stdlib
-  c.treat_symbols_as_metadata_keys_with_true_values = true
-
-  if Vagrant::Util::Platform.windows?
-    c.filter_run_excluding :skip_windows
-  else
-    c.filter_run_excluding :windows
+    # Create a thing to store our temporary files so that they aren't
+    # unlinked right away.
+    @_temp_files = []
   end
-end
 
-# Configure VAGRANT_CWD so that the tests never find an actual
-# Vagrantfile anywhere, or at least this minimizes those chances.
-ENV["VAGRANT_CWD"] = Dir.mktmpdir("vagrant")
+  # This helper creates a temporary file and returns a Pathname
+  # object pointed to it.
+  #
+  # @return [Pathname]
+  def temporary_file(contents=nil)
+    f = Tempfile.new("vagrant-unit")
 
-# Set the dummy provider to the default for tests
-ENV["VAGRANT_DEFAULT_PROVIDER"] = "dummy"
+    if contents
+      f.write(contents)
+      f.flush
+    end
 
-# Unset all host plugins so that we aren't executing subprocess things
-# to detect a host for every test.
-Vagrant.plugin("2").manager.registered.dup.each do |plugin|
-  if plugin.components.hosts.to_hash.length > 0
-    Vagrant.plugin("2").manager.unregister(plugin)
+    # Store the tempfile in an instance variable so that it is not
+    # garbage collected, so that the tempfile is not unlinked.
+    @_temp_files << f
+
+    return Pathname.new(f.path)
   end
-end
 
-# Disable checkpoint
-Checkpoint.disable!
+  # Asserts that the current (config) validation run should fail.
+  # Any error message is sufficient.
+  def assert_invalid
+    errors = subject.validate(machine)
+    if !errors.values.any? { |v| !v.empty? }
+      raise "No errors: #{errors.inspect}"
+    end
+  end
+
+  # Asserts that the current (config) validation should fail with a specific message.
+  def assert_error(error)
+    errors = subject.validate(machine)
+    raise "Error #{error} was not raised" if !errors["dsc provisioner"].include? error
+  end
+
+  # Asserts that no failures should occur in the current (config) validation run.
+  def assert_valid
+    errors = subject.validate(machine)
+    if !errors.values.all? { |v| v.empty? }
+      raise "Errors: #{errors.inspect}"
+    end
+  end
+
+end
