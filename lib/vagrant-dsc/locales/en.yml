@@ -30,3 +30,5 @@ en:
         "Path to DSC Manifest folder does not exist: %{path}"
       manifest_missing: |-
         "Path to DSC Manifest does not exist: %{manifest}"
+      manifest_and_mof_provided: |-
+        "Cannot provide configuration_file and mof_file at the same time. Please provide only one of the two."

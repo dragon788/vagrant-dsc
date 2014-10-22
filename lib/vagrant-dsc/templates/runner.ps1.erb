@@ -10,10 +10,10 @@
 <% end %>
 
 echo "PSModulePath Configured: ${env:PSModulePath}"
-echo "Running Configuration file: <%= options[:manifest_file_path] %>"
+echo "Running Configuration file: <%= options[:configuration_file_path] %>"
 
 # Import the Manifest
-. $(Join-Path "<%= options[:temp_path] %>" "<%= options[:manifest_file] %>")
+. $(Join-Path "<%= options[:temp_path] %>" "<%= options[:configuration_file] %>")
 
 # Generate the MOF file
 cd "<%= options[:temp_path] %>"

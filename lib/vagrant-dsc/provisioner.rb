@@ -24,7 +24,7 @@ module VagrantPlugins
         # Calculate the paths we're going to use based on the environment
         root_path = @machine.env.root_path
         @expanded_module_paths   = @config.expanded_module_paths(root_path)
-        @manifest_file           = File.join(manifests_guest_path, @config.manifest_file)
+        @configuration_file           = File.join(manifests_guest_path, @config.configuration_file)
 
         # Setup the module paths
         @module_paths = []
@@ -119,7 +119,7 @@ module VagrantPlugins
         script = Vagrant::Util::TemplateRenderer.render(path, options: {
             config: config,
             module_paths: @module_paths,
-            manifest_file: config.manifest_file,
+            configuration_file: config.configuration_file,
             configuration_name: config.configuration_name,
             temp_path: config.temp_dir,
             parameters: config.parameters.map { |k,v|}.join,
@@ -160,7 +160,7 @@ module VagrantPlugins
 
         @machine.ui.info(I18n.t(
           "vagrant_dsc.running_dsc",
-          manifest: config.manifest_file))
+          manifest: config.configuration_file))
 
         opts = {
           elevated: true,

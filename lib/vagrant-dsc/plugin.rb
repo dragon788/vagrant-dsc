@@ -5,8 +5,8 @@ module VagrantPlugins
     class Plugin < Vagrant.plugin("2")
       name "DSC"
       description <<-DESC
-      Provides support for provisioning your virtual machines with
-      DSC either using a local `DSC` Configuration or a DSC server.
+        Provides support for provisioning your virtual machines with
+        DSC either using a local `DSC` Configuration or a DSC server.
       DESC
 
       config(:dsc, :provisioner) do

@@ -66,21 +66,50 @@ Write-BootstrapProgress "Packages installed"
 SCRIPT
 
   # First pre-configure the machine with required software
-  config.vm.provision "shell", inline: $script
+  # config.vm.provision "shell", inline: $script
 
   config.vm.provision "dsc" do |dsc|
     # The (Vagrantfile) relative path(s) to any folder containing DSC Resources
     dsc.module_path = ["manifests", "modules"]
 
     # The path relative to `dsc.manifests_path` pointing to the Configuration file
-    dsc.manifest_file  = "manifests/ContosoWebsite.ps1"
+    dsc.configuration_file  = "manifests/MyWebsite.ps1"
 
-    # The Configuration Command to run. Assumed to be the same as the `dsc.manifest_file`
+    # The Configuration Command to run. Assumed to be the same as the `dsc.configuration_file`
     # (sans extension) if not provided.
-    # dsc.command_name = "ContosoWebsite"
+    dsc.configuration_name = "MyWebsite"
 
     # Commandline arguments to the Configuration run
-    dsc.configuration_parameters = {}
-    dsc.configuration_parameters[:machineName] = "localhost"
+    # Set of Parameters to pass to the DSC Configuration.
+    dsc.configuration_params = {[:machineName] => "localhost"}
+
+    # Relative path to a pre-generated MOF file.
+    #
+    # Path is relative to the folder containing the Vagrantfile.
+    #dsc.mof_file = "localhost.mof"
+
+    # Relative path to the folder containing the root Configuration manifest file.
+    # Defaults to 'manifests'.
+    #
+    # Path is relative to the folder containing the Vagrantfile.
+    # dsc.manifests_path = "manifests"
+
+    # Set of module paths relative to the Vagrantfile dir.
+    #
+    # These paths are added to the DSC Configuration running
+    # environment to enable local modules to be addressed.
+    #
+    # @return [Array] Set of relative module paths.
+    #dsc.module_path = []
+
+    # The type of synced folders to use when sharing the data
+    # required for the provisioner to work properly.
+    #
+    # By default this will use the default synced folder type.
+    # For example, you can set this to "nfs" to use NFS synced folders.
+    #dsc.synced_folder_type = ""
+
+    # Temporary working directory on the guest machine.
+    #dsc.temp_dir = "/tmp/vagrant-dsc"
   end
 end

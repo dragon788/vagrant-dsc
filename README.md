@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/mefellows/vagrant-dsc.svg?branch=feature%2Fprototype)](https://travis-ci.org/mefellows/vagrant-dsc)
 [![Coverage Status](https://coveralls.io/repos/mefellows/vagrant-dsc/badge.png)](https://coveralls.io/r/mefellows/vagrant-dsc)
 
-[Desired State Configuration](http://technet.microsoft.com/en-au/library/dn249912.aspx) provisioning plugin for Vagrant, enabling you to quickly configure & bootstrap a Windows Virtual Machine in a repeatable, reliable fashion.
+[Desired State Configuration](http://technet.microsoft.com/en-au/library/dn249912.aspx) provisioning plugin for Vagrant, enabling you to quickly configure & bootstrap a Windows Virtual Machine in a repeatable, reliable fashion - the Vagrant way.
 
 .NET Devs - no more excuses...
 
@@ -17,29 +17,61 @@
 
 ## Usage
 
-In your Vagrantfile, add the following plugin:
+In your Vagrantfile, add the following plugin and configure to your needs:
 
 ```ruby
   config.vm.provision "dsc" do |dsc|
     # The (Vagrantfile) relative path(s) to any folder containing DSC Resources
-    dsc.manifests_path = ["manifests", "other_manifests"]
+    dsc.module_path = ["manifests", "modules"]
 
     # The path relative to `dsc.manifests_path` pointing to the Configuration file
-    # Defaults to `default.ps1`
-    dsc.manifest_file  = "MyWebsite.ps1"
+    dsc.configuration_file  = "MyWebsite.ps1"
 
-    # The Configuration Command to run. Assumed to be the same as the `dsc.manifest_file`
-    # (sans extension) if not provided. In this case it would default to 'MyWebsite'
-    dsc.command_name = "MyCustomCommandNameForWebsite"
+    # The Configuration Command to run. Assumed to be the same as the `dsc.configuration_file`
+    # (sans extension) if not provided.
+    dsc.configuration_name = "MyWebsite"
 
+    # Commandline arguments to the Configuration run
+    # Set of Parameters to pass to the DSC Configuration.
+    dsc.configuration_params = {[:machineName] => "localhost"}
+
+    # Relative path to a pre-generated MOF file.
     #
-    dsc.parameters
+    # Path is relative to the folder containing the Vagrantfile.
+    #dsc.mof_file = "localhost.mof"
+
+    # Relative path to the folder containing the root Configuration manifest file.
+    # Defaults to 'manifests'.
+    #
+    # Path is relative to the folder containing the Vagrantfile.
+    # dsc.manifests_path = "manifests"
+
+    # Set of module paths relative to the Vagrantfile dir.
+    #
+    # These paths are added to the DSC Configuration running
+    # environment to enable local modules to be addressed.
+    #
+    # @return [Array] Set of relative module paths.
+    #dsc.module_path = []
+
+    # The type of synced folders to use when sharing the data
+    # required for the provisioner to work properly.
+    #
+    # By default this will use the default synced folder type.
+    # For example, you can set this to "nfs" to use NFS synced folders.
+    #dsc.synced_folder_type = ""
+
+    # Temporary working directory on the guest machine.
+    #dsc.temp_dir = "/tmp/vagrant-dsc"
   end
 ```
 
-## Features
+## Roadmap
 
-*
+* Support MOF file (bypasses MOF generation)
+* Support DSC Pull Server provisioning
+* Test (dry-run) a DSC Configuration Run with 'vagrant vagrant-dsc test'
+* Support for non-Windows environments
 
 ### Supported Environments
 
