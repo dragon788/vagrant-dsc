@@ -6,76 +6,72 @@ require 'rspec/its'
 describe VagrantPlugins::DSC::Provisioner do
   include_context "unit"
 
-  let(:temp_dir) { (Pathname.new(Dir.mktmpdir)).to_s }
-  let(:machine) { double("machine") }
-  let(:env) { double("environment", root_path: temp_dir) }
-  #let(:root_config) { double("root_config", temp_dir: "/tmp/vagrant-dsc-1", manifests_path: ".") }
-  let(:vm) { double ("vm")}
-  let(:manifests_path) { "manifests/MyWebsite.ps1" }
-  let(:root_config) {
-    config = VagrantPlugins::DSC::Config.new
-    config.configuration_file = manifests_path
-    config.module_path = "foo/modules"
-    config.vm = vm
-    config
-  }
-  subject { described_class.new machine, root_config  }
+  let(:root_path)            { (Pathname.new(Dir.mktmpdir)).to_s }
+  let(:machine)             { double("machine") }
+  let(:env)                 { double("environment", root_path: root_path) }
+  let(:vm)                  { double ("vm") }
+  let(:configuration_file)  { "manifests/MyWebsite.ps1" }
+  let(:manifests_path)      { "manifests" }
+  let(:module_path)         { ["foo/modules", "foo/modules2"] }
+  let(:root_config)         { VagrantPlugins::DSC::Config.new }
+  subject                   { described_class.new machine, root_config }
 
   describe "configure" do
     before do
-      puts temp_dir
       allow(machine).to receive(:root_config).and_return(root_config)
-      allow(root_config).to receive(:vm).and_return(vm)
-      # env = double("environment", root_path: "/path/to/vagrant")
-      # config = double("config")
       machine.stub(config: root_config, env: env)
-
-      # allow(machine).to receive(:root_path).and_return("/c/foo")
+      root_config.module_path = module_path
+      root_config.configuration_file = configuration_file
       root_config.finalize!
       root_config.validate(machine)
-
-      # allow(root_config).to receive(:expanded_module_paths).with("/path/to/vagrant") #{ [Pathname.new("/path/to/vagrant/dont/exist"), Pathname.new("/path/to/vagrant/also/dont/exist")] }
-      # allow(root_config).to receive(:temp_dir).with("/path/to/vagrant") #{ [Pathname.new("/path/to/vagrant/dont/exist"), Pathname.new("/path/to/vagrant/also/dont/exist")] }
-
     end
 
-    it "should setup the module paths for sharing" do
-
-    end
-
-    it "should determine the location of the manifest file on the guest" do
-
-    end
-
-    it "should share folders with the guest" do
-      # Setup mock Config object
-
-      # ynced_folder with ("/var/folders/kf/4sgp93ys2t3_9t3yyzr07c3r0000gn/T/d20141029-6108-w6pft9/manifests", "/tmp/vagrant-dsc-3/manifests", {:owner=>"root"})
-
-      # root_config.vm.synced_folder(from, to, folder_opts)
-
-      # Setup Mock for folders sync
-      # expect(vm).to receive(:synced_folder).with("#{temp_dir}/manifests", "#{File.dirname(manifests_path)}/")
-      expect(vm).to receive(:synced_folder).with("#{temp_dir}/manifests", "/tmp/vagrant-dsc-3/manifests", {:owner=>"root"})
+    it "when given default configuration, should share module and manifest folders with the guest" do
+      allow(root_config).to receive(:vm).and_return(vm)
+      expect(vm).to receive(:synced_folder).with("#{root_path}/manifests", /\/tmp\/vagrant-dsc-[0-9]+\/manifests/, {:owner=>"root"})
+      expect(vm).to receive(:synced_folder).with("#{root_path}/foo/modules", /\/tmp\/vagrant-dsc-[0-9]+\/modules-0/, {:owner=>"root"})
+      expect(vm).to receive(:synced_folder).with("#{root_path}/foo/modules2", /\/tmp\/vagrant-dsc-[0-9]+\/modules-1/, {:owner=>"root"})
 
       subject.configure(root_config)
+    end
 
-      # expect(subject.expanded_module_paths).to eq(["#{temp_dir}/foo/modules"])
+    it "when given a specific folder type, should modify folder options when sharing module and manifest folders with the guest" do
+      root_config.synced_folder_type = "nfs"
+      allow(root_config).to receive(:vm).and_return(vm)
 
+      expect(vm).to receive(:synced_folder).with("#{root_path}/manifests", /\/tmp\/vagrant-dsc-[0-9]+\/manifests/, {:type=>"nfs"})
+      expect(vm).to receive(:synced_folder).with("#{root_path}/foo/modules", /\/tmp\/vagrant-dsc-[0-9]+\/modules-0/, {:type=>"nfs"})
+      expect(vm).to receive(:synced_folder).with("#{root_path}/foo/modules2", /\/tmp\/vagrant-dsc-[0-9]+\/modules-1/, {:type=>"nfs"})
+
+      subject.configure(root_config)
+    end
+
+    it "when provided only manifests path, should only share manifest folders with the guest" do
+      root_config.synced_folder_type = "nfs"
+      root_config.module_path = nil
+      allow(root_config).to receive(:vm).and_return(vm)
+
+      expect(vm).to receive(:synced_folder).with("#{root_path}/manifests", /\/tmp\/vagrant-dsc-[0-9]+\/manifests/, {:type=>"nfs"})
+
+      subject.configure(root_config)
     end
 
     it "should install DSC for supported OS's" do
-
+      # Future
     end
   end
 
-  describe "manifest path" do
-    it "should find the correct path on the local guest" do
+  describe "verify shared folders" do
+    it "should " do
 
     end
   end
 
   describe "provision" do
+    it "should create temporary folders on the guest" do
+
+    end
+
     it "should ensure shared folders are properly configured" do
 
     end
@@ -84,24 +80,38 @@ describe VagrantPlugins::DSC::Provisioner do
 
     end
 
-    describe "DSC runner script" do
-      it "shoud generate a valid powershell command" do
-      end
-
-      it "should skip MOF file generation if one already provided" do
-
-      end
+    it "should raise an error if DSC version is invalid" do
 
     end
 
-    describe "Apply DSC" do
-      it "should" do
-      end
+    it "should raise an error if Powershell version is invalid" do
+
+    end
+  end
+
+  describe "DSC runner script" do
+    it "shoud generate a valid powershell command" do
+
     end
 
-    describe "" do
-      it "should" do
-      end
+    it "should skip MOF file generation if one already provided" do
+
+    end
+  end
+
+  describe "write DSC Runner script" do
+    it "should upload the customised DSC runner to the guest" do
+
+    end
+  end
+
+  describe "Apply DSC" do
+    it "should notify the User that provisioning has commenced" do
+
+    end
+
+    it "should invoke the DSC runner as an elevated user" do
+
     end
   end
 end

@@ -43,8 +43,20 @@ describe VagrantPlugins::DSC::Config do
 
   describe "derived settings" do
 
-    it "should set 'configuration_name' to 'MyWebsite' automatically" do
+    it "should derive 'configuration_name' from 'configuration_file' automatically" do
       subject.configuration_file = "manifests/MyWebsite.ps1"
+      subject.finalize!
+      expect(subject.configuration_name).to eq("MyWebsite")
+    end
+
+    it "should derive 'configuration_name' from 'configuration_file' automatically, when given multi-level file path" do
+      subject.configuration_file = "manifests/foo/MyWebsite.ps1"
+      subject.finalize!
+      expect(subject.configuration_name).to eq("MyWebsite")
+    end
+
+    it "should derive 'configuration_name' from 'configuration_file' automatically, when given no multi-level file path" do
+      subject.configuration_file = "MyWebsite.ps1"
       subject.finalize!
       expect(subject.configuration_name).to eq("MyWebsite")
     end
@@ -86,12 +98,12 @@ describe VagrantPlugins::DSC::Config do
 
     it "should generate a module path on the host machine relative to the Vagrantfile" do
       subject.module_path = "foo/modules"
-      expect(subject.expanded_module_paths('/path/to/vagrant/')).to eq([Pathname.new("/path/to/vagrant/foo/modules")])
+      expect(subject.expanded_module_paths('/path/to/vagrant/')).to eq(["/path/to/vagrant/foo/modules"])
     end
 
     it "should generate module paths on the host machine relative to the Vagrantfile" do
       subject.module_path = ["dont/exist", "also/dont/exist"]
-      expect(subject.expanded_module_paths('/path/to/vagrant/')).to eq([Pathname.new("/path/to/vagrant/dont/exist"), Pathname.new("/path/to/vagrant/also/dont/exist")])
+      expect(subject.expanded_module_paths('/path/to/vagrant/')).to eq(["/path/to/vagrant/dont/exist", "/path/to/vagrant/also/dont/exist"])
     end
 
     it "should be invalid if 'manifests_path' is not a real directory" do

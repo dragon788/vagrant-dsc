@@ -115,7 +115,7 @@ module VagrantPlugins
         paths = module_path
         paths = [paths] if !paths.is_a?(Array)
         paths.map do |path|
-          Pathname.new(path).expand_path(root_path)
+          Pathname.new(path).expand_path(root_path).to_s
         end
       end
 
@@ -135,7 +135,7 @@ module VagrantPlugins
 
         # Manifest file validation
         this_expanded_module_paths.each do |path|
-          errors << I18n.t("vagrant_dsc.errors.module_path_missing", path: path.to_s) if !Pathname.new(path).expand_path(machine.env.root_path).directory?
+          errors << I18n.t("vagrant_dsc.errors.module_path_missing", path: path) if !Pathname.new(path).expand_path(machine.env.root_path).directory?
         end
 
         expanded_path = Pathname.new(manifests_path).

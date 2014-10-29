@@ -15,13 +15,11 @@ module VagrantPlugins
     # on a guest Virtual Machine, enabling you to quickly configure & bootstrap a Windows Virtual Machine in a repeatable,
     # reliable fashion - the Vagrant way.
     class Provisioner < Vagrant.plugin("2", :provisioner)
-      PowerShell_VERSION = 5
+      PowerShell_VERSION = 4
 
       # Default path for storing the transient script runner
       # This should be removed in cleanup
       DSC_GUEST_RUNNER_PATH = "c:/tmp/vagrant-dsc-runner.ps1"
-
-      attr_accessor :expanded_module_paths
 
       # Constructs the Provisioner Plugin.
       #
@@ -43,7 +41,6 @@ module VagrantPlugins
         # Calculate the paths we're going to use based on the environment
         root_path = @machine.env.root_path
         @expanded_module_paths   = @config.expanded_module_paths(root_path)
-        @configuration_file      = File.join(manifests_guest_path, @config.configuration_file)
 
         # Setup the module paths
         @module_paths = []
