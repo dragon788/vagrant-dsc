@@ -70,7 +70,6 @@ module VagrantPlugins
         @configuration_params   = {}
         @synced_folder_type     = UNSET_VALUE
         @temp_dir               = UNSET_VALUE
-
         @logger = Log4r::Logger.new("vagrant::vagrant_dsc")
       end
 
@@ -106,7 +105,7 @@ module VagrantPlugins
       # Returns the module paths as an array of paths expanded relative to the
       # root path.
       #
-      # @param [String|Array] root_path The path
+      # @param [String|Array] root_path The relative path to expand module paths against.
       # @return [Array] Set of fully qualified paths to the modules directories.
       def expanded_module_paths(root_path)
         return [] if !module_path

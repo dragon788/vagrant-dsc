@@ -41,7 +41,7 @@ describe VagrantPlugins::DSC::Config do
     its("working_directory")    { expect be_nil }
   end
 
-  describe "Derived settings" do
+  describe "derived settings" do
 
     it "should set 'configuration_name' to 'MyWebsite' automatically" do
       subject.configuration_file = "manifests/MyWebsite.ps1"
@@ -73,13 +73,26 @@ describe VagrantPlugins::DSC::Config do
       config = double("config")
       machine.stub(config: config, env: env)
 
-      allow(machine).to receive(:root_path).and_return("")
+      allow(machine).to receive(:root_path).and_return("/path/to/vagrant")
     end
 
     # before do
     #   # By default lets be Linux for validations
     #   Vagrant::Util::Platform.stub(linux: true)
     # end
+
+    # it "should disallow absolute module paths" do
+    # end
+
+    it "should generate a module path on the host machine relative to the Vagrantfile" do
+      subject.module_path = "foo/modules"
+      expect(subject.expanded_module_paths('/path/to/vagrant/')).to eq([Pathname.new("/path/to/vagrant/foo/modules")])
+    end
+
+    it "should generate module paths on the host machine relative to the Vagrantfile" do
+      subject.module_path = ["dont/exist", "also/dont/exist"]
+      expect(subject.expanded_module_paths('/path/to/vagrant/')).to eq([Pathname.new("/path/to/vagrant/dont/exist"), Pathname.new("/path/to/vagrant/also/dont/exist")])
+    end
 
     it "should be invalid if 'manifests_path' is not a real directory" do
       subject.manifests_path = "/i/do/not/exist"

@@ -1,9 +1,12 @@
 #
-# DSC Runner Script.
-# Bootstraps the DSC environment, configuration and runs the DSC Configuration.
+# DSC Runner.
+#
+# Bootstraps the DSC environment, sets up configuration data
+# and runs the DSC Configuration.
+#
 #
 
-# Set the local PowerShell module environment path
+# Set the local PowerShell Module environment path
 <% options[:module_paths].each do |host, guest| %>
     echo "Adding to path: <%= guest %>"
     $env:PSModulePath="<%= guest %>;${env:PSModulePath}"
@@ -12,13 +15,18 @@
 echo "PSModulePath Configured: ${env:PSModulePath}"
 echo "Running Configuration file: <%= options[:configuration_file_path] %>"
 
-# Import the Manifest
-. $(Join-Path "<%= options[:temp_path] %>" "<%= options[:configuration_file] %>")
 
-# Generate the MOF file
-cd "<%= options[:temp_path] %>"
-$StagingPath = $(Join-Path "<%= options[:temp_path] %>" "staging")
-<%= options[:configuration_name] %> -MachineName "localhost" -OutputPath $StagingPath <%= options[:configuration_parameters] %>
+# Generate the MOF file, only if one not already provided.
+<% if options[:mof_file] == nil %>
+  # Import the Manifest
+  . $(Join-Path "<%= options[:temp_path] %>" "<%= options[:configuration_file] %>")
+
+  <%  %>
+
+  cd "<%= options[:temp_path] %>"
+  $StagingPath = $(Join-Path "<%= options[:temp_path] %>" "staging")
+  <%= options[:configuration_name] %> -MachineName "localhost" -OutputPath $StagingPath <%= options[:configuration_parameters] %>
+<% end %>
 
 # Start a DSC Configuration run
 Start-DscConfiguration -Force -Wait -Verbose -Path $StagingPath

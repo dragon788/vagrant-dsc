@@ -3,28 +3,47 @@ require 'erb'
 
 module VagrantPlugins
   module DSC
+    # DSC Errors namespace, including setup of locale-based error messages.
     class DSCError < Vagrant::Errors::VagrantError
       error_namespace("vagrant_dsc.errors")
       I18n.load_path << File.expand_path("locales/en.yml", File.dirname(__FILE__))
     end
 
+    # DSC Provisioner Plugin.
+    #
+    # Runs the [Desired State Configuration](http://technet.microsoft.com/en-au/library/dn249912.aspx) system
+    # on a guest Virtual Machine, enabling you to quickly configure & bootstrap a Windows Virtual Machine in a repeatable,
+    # reliable fashion - the Vagrant way.
     class Provisioner < Vagrant.plugin("2", :provisioner)
-      POWERSHELL_VERSION = 5
+      PowerShell_VERSION = 5
+
+      # Default path for storing the transient script runner
+      # This should be removed in cleanup
       DSC_GUEST_RUNNER_PATH = "c:/tmp/vagrant-dsc-runner.ps1"
 
+      attr_accessor :expanded_module_paths
+
+      # Constructs the Provisioner Plugin.
+      #
+      # @param [Machine] machine The guest machine that is to be provisioned.
+      # @param [Config] config The Configuration object used by the Provisioner.
+      # @returns Provisioner
       def initialize(machine, config)
         super
 
         @logger = Log4r::Logger.new("vagrant::provisioners::dsc")
       end
 
+      # Configures the Provisioner.
+      #
+      # @param [Config] root_config The default configuration from the Vagrant hierarchy.
       def configure(root_config)
-        @logger.info("==> Configuring DSC man!")
+        @logger.info("==> Configuring DSC")
 
         # Calculate the paths we're going to use based on the environment
         root_path = @machine.env.root_path
         @expanded_module_paths   = @config.expanded_module_paths(root_path)
-        @configuration_file           = File.join(manifests_guest_path, @config.configuration_file)
+        @configuration_file      = File.join(manifests_guest_path, @config.configuration_file)
 
         # Setup the module paths
         @module_paths = []
@@ -38,6 +57,7 @@ module VagrantPlugins
 
         # Share the manifests directory with the guest
         @logger.info("==> Sharing manifest #{File.expand_path(@config.manifests_path, root_path)} | #{manifests_guest_path} | #{folder_opts}")
+
         root_config.vm.synced_folder(
           File.expand_path(@config.manifests_path, root_path),
           manifests_guest_path, folder_opts)
@@ -49,6 +69,7 @@ module VagrantPlugins
         end
       end
 
+      # Provision the guest machine with DSC.
       def provision
         @logger.info("==> Provisioning DSC man! #{Vagrant.source_root}")
 
@@ -75,26 +96,35 @@ module VagrantPlugins
 
         verify_dsc
 
-        generate_dsc_runner_script
-
-        run_dsc_apply
-
+        run_dsc_apply(generate_dsc_runner_script)
       end
 
+      # Cleanup after a destroy action.
+      #
+      # This is the method called when destroying a machine that allows
+      # for any state related to the machine created by the provisioner
+      # to be cleaned up.
+      def cleanup
+        # Remove temp files? Or is this ONLY called in destroy (in which case those files will go anyway...)
+      end
+
+      # Local path (guest path) to the manifests directory.
       def manifests_guest_path
           File.join(config.temp_dir, config.manifests_path)
       end
 
+      # Verify that a current version of WMF/Powershell is enabled on the guest.
       def verify_dsc
         verify_binary("Start-DscConfiguration")
 
         # Confirm WMF 4.0+ in $PSVersionTable
         @machine.communicate.test(
-            "(($PSVersionTable | ConvertTo-json | ConvertFrom-Json).PSVersion.Major) -ge #{POWERSHELL_VERSION} ",
+            "(($PSVersionTable | ConvertTo-json | ConvertFrom-Json).PSVersion.Major) -ge #{PowerShell_VERSION} ",
             error_class: DSCError,
-            error_key: :dsc_incorrect_powershell_version )
+            error_key: :dsc_incorrect_PowerShell_version )
       end
 
+      # Verify the DSC binary is executable on the guest machine.
       def verify_binary(binary)
         @machine.communicate.sudo(
           "which #{binary}",
@@ -105,15 +135,21 @@ module VagrantPlugins
 
       # Install and Configure DSC where possible.
       #
+      # Operation is current unsupported, but is likely to be enabled
+      # as a flag when the plugin detects an unsupported OS.
       def install_dsc
+        raise DSCError, :unsupported_operation, :operation => "install_dsc"
+
+        # Install chocolatey
 
         # Ensure .NET 4.5 installed
 
         # Ensure WMF 4.0 is installed
-
       end
 
-      # Generates a Powershell DSC runner script from an ERB template
+      # Generates a PowerShell DSC runner script from an ERB template
+      #
+      # @return [String] The interpolated PowerShell script.
       def generate_dsc_runner_script
         path = File.expand_path("../templates/runner.ps1", __FILE__)
         script = Vagrant::Util::TemplateRenderer.render(path, options: {
@@ -124,6 +160,13 @@ module VagrantPlugins
             temp_path: config.temp_dir,
             parameters: config.parameters.map { |k,v|}.join,
         })
+      end
+
+      # Writes the PowerShell DSC runner script to a location on the guest.
+      #
+      # @param [String] script The PowerShell DSC runner script.
+      # @return [String] the Path to the uploaded location on the guest machine.
+      def write_dsc_runner_script(script)
         guest_script_path = DSC_GUEST_RUNNER_PATH
         file = Tempfile.new(["vagrant-dsc-runner", "ps1"])
         begin
@@ -138,7 +181,12 @@ module VagrantPlugins
         guest_script_path
       end
 
+      # Runs the DSC Configuration over the guest machine.
+      #
+      # Expects
       def run_dsc_apply
+
+        # Check the DSC_GUEST_RUNNER_PATH exists?
 
         # Set up Configuration arguments (hostname, manifest/module location, error levels ...)
 
@@ -146,13 +194,7 @@ module VagrantPlugins
 
           # Where is the manifest
 
-        # Setup $env:PSModulePath for execution env.
-
-        # Integrator -ConfigurationData "$SetupPath\Configuration\Development.psd1" -OutputPath $StagingPath -BasePath $AppBasePath
-
         # TODO: Get a counter in here in case of multiple runs
-
-        # Apply configuration/parameters to DSC Runner
 
         # Import starting point configuration into scope
 
@@ -175,6 +217,8 @@ module VagrantPlugins
         end
       end
 
+      # Verify that the shared folders have been properly configured
+      # on the guest machine.
       def verify_shared_folders(folders)
         folders.each do |folder|
           @logger.info("Checking for shared folder: #{folder}")
@@ -184,6 +228,7 @@ module VagrantPlugins
         end
       end
 
+      # If on windows, set communicator to winrm automatically.
       def windows?
         @machine.config.vm.communicator == :winrm
       end
