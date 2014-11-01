@@ -7,13 +7,13 @@ describe VagrantPlugins::DSC::Provisioner do
   include_context "unit"
 
   let(:root_path)           { (Pathname.new(Dir.mktmpdir)).to_s }
-  let(:machine)             { double("machine") }
-  let(:env)                 { double("environment", root_path: root_path) }
+  let(:ui)                  { Vagrant::UI::Silent.new }
+  let(:machine)             { double("machine", ui: ui) }
+  let(:env)                 { double("environment", root_path: root_path, ui: ui) }
   let(:vm)                  { double ("vm") }
   let(:communicator)        { double ("communicator") }
   let(:guest)               { double ("guest") }
   let(:configuration_file)  { "manifests/MyWebsite.ps1" }
-  # let(:manifests_path)      { "manifests" }
   let(:module_path)         { ["foo/modules", "foo/modules2"] }
   let(:root_config)         { VagrantPlugins::DSC::Config.new }
   subject                   { described_class.new machine, root_config }
@@ -26,6 +26,12 @@ describe VagrantPlugins::DSC::Provisioner do
       root_config.configuration_file = configuration_file
       root_config.finalize!
       root_config.validate(machine)
+    end
+
+    it "should confirm if the OS is Windows by confirming with the communicator" do
+      allow(root_config).to receive(:vm).and_return(vm)
+      allow(vm).to receive(:communicator).and_return(:winrm)
+      expect(subject.windows?).to eq(true)
     end
 
     it "when given default configuration, should share module and manifest folders with the guest" do
@@ -59,8 +65,11 @@ describe VagrantPlugins::DSC::Provisioner do
     end
 
     it "should install DSC for supported OS's" do
-      # expect { subject.install_dsc }.to raise_error("\"Operation unsupported / not-yet implemented: install_dsc\"")
-      subject.install_dsc
+      expect { subject.install_dsc }.to raise_error("\"Operation unsupported / not-yet implemented: install_dsc\"")
+
+
+      # "Operation unsupported / not-yet implemented: install_dsc"
+      # expect { subject.install_dsc }.to raise_error(VagrantPlugins::DSC::DSCError)
     end
   end
 
@@ -197,6 +206,11 @@ describe VagrantPlugins::DSC::Provisioner do
 
   describe "DSC runner script" do
     before do
+      # Prevent counters messing with output in tests
+      Vagrant::Util::Counter.class_eval do
+        def get_and_update_counter(name=nil) 1 end
+      end
+
       allow(machine).to receive(:root_config).and_return(root_config)
       root_config.configuration_file = configuration_file
       machine.stub(config: root_config, env: env)
@@ -205,12 +219,12 @@ describe VagrantPlugins::DSC::Provisioner do
       root_config.finalize!
       root_config.validate(machine)
       subject.configure(root_config)
+
     end
 
     context "with default parameters" do
       it "should generate a valid powershell command" do
         script = subject.generate_dsc_runner_script
-
         expect_script = "#
 # DSC Runner.
 #
@@ -220,10 +234,10 @@ describe VagrantPlugins::DSC::Provisioner do
 #
 
 # Set the local PowerShell Module environment path
-echo \"Adding to path: /tmp/vagrant-dsc-15/modules-0;/tmp/vagrant-dsc-15/modules-1\"
-$env:PSModulePath=\"/tmp/vagrant-dsc-15/modules-0;/tmp/vagrant-dsc-15/modules-1;${env:PSModulePath}\"
+echo \"Adding to path: /tmp/vagrant-dsc-1/modules-0;/tmp/vagrant-dsc-1/modules-1\"
+$env:PSModulePath=\"/tmp/vagrant-dsc-1/modules-0;/tmp/vagrant-dsc-1/modules-1;${env:PSModulePath}\"
 
-$script = $(Join-Path \"/tmp/vagrant-dsc-15\" \"manifests/MyWebsite.ps1\")
+$script = $(Join-Path \"/tmp/vagrant-dsc-1\" \"manifests/MyWebsite.ps1\")
 echo \"PSModulePath Configured: ${env:PSModulePath}\"
 echo \"Running Configuration file: ${script}\"
 
@@ -231,8 +245,8 @@ echo \"Running Configuration file: ${script}\"
 # Import the Manifest
 . $script
 
-cd \"/tmp/vagrant-dsc-15\"
-$StagingPath = $(Join-Path \"/tmp/vagrant-dsc-15\" \"staging\")
+cd \"/tmp/vagrant-dsc-1\"
+$StagingPath = $(Join-Path \"/tmp/vagrant-dsc-1\" \"staging\")
 MyWebsite -MachineName \"localhost\" -OutputPath $StagingPath 
 
 # Start a DSC Configuration run
@@ -263,10 +277,10 @@ del -Path $StagingPath -Recurse"
 #
 
 # Set the local PowerShell Module environment path
-echo \"Adding to path: /tmp/vagrant-dsc-17/modules-0;/tmp/vagrant-dsc-17/modules-1\"
-$env:PSModulePath=\"/tmp/vagrant-dsc-17/modules-0;/tmp/vagrant-dsc-17/modules-1;${env:PSModulePath}\"
+echo \"Adding to path: /tmp/vagrant-dsc-1/modules-0;/tmp/vagrant-dsc-1/modules-1\"
+$env:PSModulePath=\"/tmp/vagrant-dsc-1/modules-0;/tmp/vagrant-dsc-1/modules-1;${env:PSModulePath}\"
 
-$script = $(Join-Path \"/tmp/vagrant-dsc-17\" \"manifests/MyWebsite.ps1\")
+$script = $(Join-Path \"/tmp/vagrant-dsc-1\" \"manifests/MyWebsite.ps1\")
 echo \"PSModulePath Configured: ${env:PSModulePath}\"
 echo \"Running Configuration file: ${script}\"
 
@@ -274,8 +288,8 @@ echo \"Running Configuration file: ${script}\"
 # Import the Manifest
 . $script
 
-cd \"/tmp/vagrant-dsc-17\"
-$StagingPath = $(Join-Path \"/tmp/vagrant-dsc-17\" \"staging\")
+cd \"/tmp/vagrant-dsc-1\"
+$StagingPath = $(Join-Path \"/tmp/vagrant-dsc-1\" \"staging\")
 MyWebsite -MachineName \"localhost\" -OutputPath $StagingPath -Foo \"bar\" -ComputerName \"catz\"
 
 # Start a DSC Configuration run
@@ -284,8 +298,45 @@ Start-DscConfiguration -Force -Wait -Verbose -Path $StagingPath
 # Cleanup
 del -Path $StagingPath -Recurse"
 
-        expect(script).to eq(expect_script)        
+        expect(script).to eq(expect_script)
       end
+
+      it "should allow flags as arguments to the generated Powershell runner" do
+        root_config.configuration_params = {"-FooFlag" => nil, "-BarFlag" => nil, "-FooParam" => "FooVal"}
+        script = subject.generate_dsc_runner_script
+
+        expect_script = "#
+# DSC Runner.
+#
+# Bootstraps the DSC environment, sets up configuration data
+# and runs the DSC Configuration.
+#
+#
+
+# Set the local PowerShell Module environment path
+echo \"Adding to path: /tmp/vagrant-dsc-1/modules-0;/tmp/vagrant-dsc-1/modules-1\"
+$env:PSModulePath=\"/tmp/vagrant-dsc-1/modules-0;/tmp/vagrant-dsc-1/modules-1;${env:PSModulePath}\"
+
+$script = $(Join-Path \"/tmp/vagrant-dsc-1\" \"manifests/MyWebsite.ps1\")
+echo \"PSModulePath Configured: ${env:PSModulePath}\"
+echo \"Running Configuration file: ${script}\"
+
+# Generate the MOF file, only if a MOF path not already provided.
+# Import the Manifest
+. $script
+
+cd \"/tmp/vagrant-dsc-1\"
+$StagingPath = $(Join-Path \"/tmp/vagrant-dsc-1\" \"staging\")
+MyWebsite -MachineName \"localhost\" -OutputPath $StagingPath -FooFlag -BarFlag -FooParam \"FooVal\"
+
+# Start a DSC Configuration run
+Start-DscConfiguration -Force -Wait -Verbose -Path $StagingPath
+
+# Cleanup
+del -Path $StagingPath -Recurse"
+
+        expect(script).to eq(expect_script)
+      end      
     end
 
     context "with a MOF file specified" do
@@ -303,10 +354,10 @@ del -Path $StagingPath -Recurse"
 #
 
 # Set the local PowerShell Module environment path
-echo \"Adding to path: /tmp/vagrant-dsc-18/modules-0;/tmp/vagrant-dsc-18/modules-1\"
-$env:PSModulePath=\"/tmp/vagrant-dsc-18/modules-0;/tmp/vagrant-dsc-18/modules-1;${env:PSModulePath}\"
+echo \"Adding to path: /tmp/vagrant-dsc-1/modules-0;/tmp/vagrant-dsc-1/modules-1\"
+$env:PSModulePath=\"/tmp/vagrant-dsc-1/modules-0;/tmp/vagrant-dsc-1/modules-1;${env:PSModulePath}\"
 
-$script = $(Join-Path \"/tmp/vagrant-dsc-18\" \"manifests/MyWebsite.ps1\")
+$script = $(Join-Path \"/tmp/vagrant-dsc-1\" \"manifests/MyWebsite.ps1\")
 echo \"PSModulePath Configured: ${env:PSModulePath}\"
 echo \"Running Configuration file: ${script}\"
 
@@ -319,24 +370,37 @@ Start-DscConfiguration -Force -Wait -Verbose -Path $StagingPath
 # Cleanup
 del -Path $StagingPath -Recurse"
 
-        expect(script).to eq(expect_script)        
+        expect(script).to eq(expect_script)
       end
     end
   end
 
   describe "write DSC Runner script" do
     it "should upload the customised DSC runner to the guest" do
-
+      script = "myscript"
+      path = "/local/runner/path"
+      guest_path = "c:/tmp/vagrant-dsc-runner.ps1"
+      machine.stub(config: root_config, env: env, communicate: communicator)
+      file = double("file")
+      allow(file).to receive(:path).and_return(path)
+      allow(Tempfile).to receive(:new) { file }
+      expect(file).to receive(:write).with(script)
+      expect(file).to receive(:fsync)
+      expect(file).to receive(:close).exactly(2).times
+      expect(file).to receive(:unlink)
+      expect(communicator).to receive(:upload).with(path, guest_path)
+      res = subject.write_dsc_runner_script(script)
+      expect(res.to_s).to eq(guest_path)
     end
   end
 
   describe "Apply DSC" do
-    it "should notify the User that provisioning has commenced" do
-
-    end
-
-    it "should invoke the DSC runner as an elevated user" do
-
+    it "should invoke the DSC Runner and notify the User of provisioning status" do
+      expect(ui).to receive(:info).with(any_args).once
+      expect(ui).to receive(:info).with("provisioned!").once
+      allow(machine).to receive(:communicate).and_return(communicator)
+      expect(communicator).to receive(:sudo).with('.\\' + "'c:/tmp/vagrant-dsc-runner.ps1'",{:elevated=>true, :error_key=>:ssh_bad_exit_status_muted, :good_exit=>[0, 2]}).and_yield("type", "provisioned!")
+      subject.run_dsc_apply
     end
   end
 end

@@ -8,6 +8,9 @@ module VagrantPlugins
       error_namespace("vagrant_dsc.errors")
       I18n.load_path << File.expand_path("locales/en.yml", File.dirname(__FILE__))
     end
+    class DSCUnsupportedOperation < DSCError
+      error_key(:unsupported_operation)
+    end    
 
     # DSC Provisioner Plugin.
     #
@@ -136,7 +139,7 @@ module VagrantPlugins
       # as a flag when the plugin detects an unsupported OS.
       def install_dsc
         # raise DSCError, I18n.t("vagrant_dsc.errors.manifest_missing", operation: "install_dsc")
-        raise DSCError, :unsupported_operation#, operation: "install_dsc"
+        raise DSCUnsupportedOperation,  :operation => "install_dsc"
         # Install chocolatey
 
         # Ensure .NET 4.5 installed
@@ -157,7 +160,7 @@ module VagrantPlugins
             configuration_file: @config.configuration_file,
             configuration_name: @config.configuration_name,
             temp_path: @config.temp_dir,
-            parameters: @config.configuration_params.map { |k,v| "#{k} \"#{v}\""}.join(" ")
+            parameters: @config.configuration_params.map { |k,v| "#{k}" + (!v.nil? ? " \"#{v}\"": '') }.join(" ")
         })
       end
 
@@ -197,7 +200,7 @@ module VagrantPlugins
 
         # Import starting point configuration into scope
 
-        command = ".\"#{DSC_GUEST_RUNNER_PATH}\""
+        command = ".\\'#{DSC_GUEST_RUNNER_PATH}'"
 
         @machine.ui.info(I18n.t(
           "vagrant_dsc.running_dsc",
@@ -227,7 +230,7 @@ module VagrantPlugins
         end
       end
 
-      # If on windows, set communicator to winrm automatically.
+      # If on using WinRM, we can assume we are on Windows
       def windows?
         @machine.config.vm.communicator == :winrm
       end

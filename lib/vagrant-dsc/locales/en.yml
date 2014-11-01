@@ -33,6 +33,6 @@ en:
       manifest_and_mof_provided: |-
         "Cannot provide configuration_file and mof_path at the same time. Please provide only one of the two."
       unsupported_operation: |-
-        "Operation unsupported / not-yet implemented"
+        "Operation unsupported / not-yet implemented: %{operation}"
       absolute_module_path: |-
         "Absolute 'module_path' not allowed. Please provide a path relative to your Vagrantfile."
