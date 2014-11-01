@@ -14,10 +14,10 @@ module VagrantPlugins
       # @return [Hash] Set of k/v parameters to pass to DSC.
       attr_accessor :configuration_params
 
-      # Relative path to a pre-generated MOF file.
+      # Relative path to a folder, containing the pre-generated MOF file.
       #
       # Path is relative to the folder containing the Vagrantfile.
-      attr_accessor :mof_file
+      attr_accessor :mof_path
 
       # Relative path to the DSC Configuration file.
       #
@@ -65,7 +65,7 @@ module VagrantPlugins
         @configuration_file     = UNSET_VALUE
         @manifests_path         = UNSET_VALUE
         @configuration_name     = UNSET_VALUE
-        @mof_file               = UNSET_VALUE
+        @mof_path               = UNSET_VALUE
         @module_path            = UNSET_VALUE
         @configuration_params   = {}
         @synced_folder_type     = UNSET_VALUE
@@ -85,12 +85,12 @@ module VagrantPlugins
         @module_path        = nil if @module_path == UNSET_VALUE
         @synced_folder_type = nil if @synced_folder_type == UNSET_VALUE
         @temp_dir           = nil if @temp_dir == UNSET_VALUE
-        @mof_file           = nil if @mof_file == UNSET_VALUE
+        @mof_path           = nil if @mof_path == UNSET_VALUE
         @configuration_name = File.basename(@configuration_file, File.extname(@configuration_file)) if @configuration_name == UNSET_VALUE
         @manifests_path     = File.dirname(@configuration_file) if @manifests_path == UNSET_VALUE
 
         # Can't supply them both!
-        if (@configuration_file != nil && @mof_file != nil)
+        if (@configuration_file != nil && @mof_path != nil)
           raise DSCError, :manifest_and_mof_provided
         end
 

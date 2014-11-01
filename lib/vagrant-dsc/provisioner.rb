@@ -116,7 +116,7 @@ module VagrantPlugins
 
         # Confirm WMF 4.0+ in $PSVersionTable
         @machine.communicate.test(
-            "(($PSVersionTable | ConvertTo-json | ConvertFrom-Json).PSVersion.Major) -ge #{PowerShell_VERSION} ",
+            "(($PSVersionTable | ConvertTo-json | ConvertFrom-Json).PSVersion.Major) -ge #{PowerShell_VERSION}",
             error_class: DSCError,
             error_key: :dsc_incorrect_PowerShell_version )
       end
@@ -135,8 +135,8 @@ module VagrantPlugins
       # Operation is current unsupported, but is likely to be enabled
       # as a flag when the plugin detects an unsupported OS.
       def install_dsc
-        raise DSCError, :unsupported_operation, :operation => "install_dsc"
-
+        # raise DSCError, I18n.t("vagrant_dsc.errors.manifest_missing", operation: "install_dsc")
+        raise DSCError, :unsupported_operation#, operation: "install_dsc"
         # Install chocolatey
 
         # Ensure .NET 4.5 installed
@@ -149,13 +149,15 @@ module VagrantPlugins
       # @return [String] The interpolated PowerShell script.
       def generate_dsc_runner_script
         path = File.expand_path("../templates/runner.ps1", __FILE__)
+
         script = Vagrant::Util::TemplateRenderer.render(path, options: {
-            config: config,
-            module_paths: @module_paths,
-            configuration_file: config.configuration_file,
-            configuration_name: config.configuration_name,
-            temp_path: config.temp_dir,
-            parameters: config.parameters.map { |k,v|}.join,
+            config: @config,
+            module_paths: @module_paths.map { |k,v| v }.join(";"),
+            mof_path: @config.mof_path,
+            configuration_file: @config.configuration_file,
+            configuration_name: @config.configuration_name,
+            temp_path: @config.temp_dir,
+            parameters: @config.configuration_params.map { |k,v| "#{k} \"#{v}\""}.join(" ")
         })
       end
 

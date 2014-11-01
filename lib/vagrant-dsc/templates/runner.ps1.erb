@@ -7,25 +7,25 @@
 #
 
 # Set the local PowerShell Module environment path
-<% options[:module_paths].each do |host, guest| %>
-    echo "Adding to path: <%= guest %>"
-    $env:PSModulePath="<%= guest %>;${env:PSModulePath}"
+<% if options[:module_paths]  %>
+echo "Adding to path: <%= options[:module_paths] %>"
+$env:PSModulePath="<%= options[:module_paths] %>;${env:PSModulePath}"
 <% end %>
 
+$script = $(Join-Path "<%= options[:temp_path] %>" "<%= options[:configuration_file] %>")
 echo "PSModulePath Configured: ${env:PSModulePath}"
-echo "Running Configuration file: <%= options[:configuration_file_path] %>"
+echo "Running Configuration file: ${script}"
 
+# Generate the MOF file, only if a MOF path not already provided.
+<% if options[:mof_path] == nil %>
+# Import the Manifest
+. $script
 
-# Generate the MOF file, only if one not already provided.
-<% if options[:mof_file] == nil %>
-  # Import the Manifest
-  . $(Join-Path "<%= options[:temp_path] %>" "<%= options[:configuration_file] %>")
-
-  <%  %>
-
-  cd "<%= options[:temp_path] %>"
-  $StagingPath = $(Join-Path "<%= options[:temp_path] %>" "staging")
-  <%= options[:configuration_name] %> -MachineName "localhost" -OutputPath $StagingPath <%= options[:configuration_parameters] %>
+cd "<%= options[:temp_path] %>"
+$StagingPath = $(Join-Path "<%= options[:temp_path] %>" "staging")
+<%=options[:configuration_name]%> -MachineName "localhost" -OutputPath $StagingPath <%= options[:parameters] %>
+<% else %>
+$StagingPath = "<%= options[:mof_path] %>"
 <% end %>
 
 # Start a DSC Configuration run

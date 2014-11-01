@@ -32,7 +32,7 @@ describe VagrantPlugins::DSC::Config do
     its("configuration_file")   { expect = "default.ps1" }
     its("manifests_path")       { expect = "." }
     its("configuration_name")   { expect = "default" }
-    its("mof_file")             { expect be_nil }
+    its("mof_path")             { expect be_nil }
     its("module_path")          { expect be_nil }
     its("options")              { expect = [] }
     its("configuration_params") { expect = {} }
@@ -125,14 +125,14 @@ describe VagrantPlugins::DSC::Config do
       assert_error("\"Path to DSC Modules does not exist: /i/dont/exist\"")
     end
 
-    it "should be invalid if 'configuration_file' and 'mof_file' provided" do
+    it "should be invalid if 'configuration_file' and 'mof_path' provided" do
       mof = File.new(temporary_file)
       man = File.new(temporary_file)
 
       subject.configuration_file = File.basename(man)
-      subject.mof_file = File.basename(mof)
-      expect { subject.finalize! }.to raise_error("\"Cannot provide configuration_file and mof_file at the same time. Please provide only one of the two.\"")
-      # assert_error("\"Cannot provide configuration_file and mof_file at the same time. Please provide only one of the two.\"")
+      subject.mof_path = File.basename(mof)
+      expect { subject.finalize! }.to raise_error("\"Cannot provide configuration_file and mof_path at the same time. Please provide only one of the two.\"")
+      # assert_error("\"Cannot provide configuration_file and mof_path at the same time. Please provide only one of the two.\"")
     end
 
     it "should be valid if 'configuration_file' is a real file" do

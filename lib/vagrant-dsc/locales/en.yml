@@ -31,8 +31,8 @@ en:
       manifest_missing: |-
         "Path to DSC Manifest does not exist: %{manifest}"
       manifest_and_mof_provided: |-
-        "Cannot provide configuration_file and mof_file at the same time. Please provide only one of the two."
-      unspported_operation: |-
-        "Operation unspported / not-yet implemented: %{operation}"
+        "Cannot provide configuration_file and mof_path at the same time. Please provide only one of the two."
+      unsupported_operation: |-
+        "Operation unsupported / not-yet implemented"
       absolute_module_path: |-
         "Absolute 'module_path' not allowed. Please provide a path relative to your Vagrantfile."
